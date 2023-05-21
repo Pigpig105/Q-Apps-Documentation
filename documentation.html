@@ -21,6 +21,764 @@
         </ul>
     </nav>
 
+    <div class="mainContentDocs">
+        <p>
+            <h1 id="qortal-project---q-apps-documentation">Qortal Project - Q-Apps
+                Documentation</h1>
+                <h2 id="introduction">Introduction</h2>
+                <p>Q-Apps are static web apps written in javascript, HTML, CSS, and
+                other static assets. The key difference between a Q-App and a fully
+                static site is its ability to interact with both the logged-in user and
+                on-chain data. This is achieved using the API described in this
+                document.</p>
+                <h1 id="section-0-basic-qdn-concepts">Section 0: Basic QDN concepts</h1>
+                <h2 id="introduction-to-qdn-resources">Introduction to QDN
+                resources</h2>
+                <p>Each published item on QDN (Qortal Data Network) is referred to as a
+                “resource”. A resource could contain anything from a few characters of
+                text, to a multi-layered directory structure containing thousands of
+                files.</p>
+                <p>Resources are stored on-chain, however the data payload is generally
+                stored off-chain, and verified using an on-chain SHA-256 hash.</p>
+                <p>To publish a resource, a user must first register a name, and then
+                include that name when publishing the data. Accounts without a
+                registered name are unable to publish to QDN from a Q-App at this
+                time.</p>
+                <p>Owning the name grants update privileges to the data. If that name is
+                later sold or transferred, the permission to update that resource is
+                moved to the new owner.</p>
+                <h2 id="name-service-identifier">Name, service &amp; identifier</h2>
+                <p>Each QDN resource has 3 important fields: - <code>name</code> - the
+                registered name of the account that is publishing the data (which will
+                hold update/edit privileges going forwards).<br /><br /> -
+                <code>service</code> - the type of content (e.g. IMAGE or JSON).
+                Different services have different validation rules. See <a
+                href="#services">list of available services</a>.<br /><br /> -
+                <code>identifier</code> - an optional string to allow more than one
+                resource to exist for a given name/service combination. For example, the
+                name <code>QortalDemo</code> may wish to publish multiple images. This
+                can be achieved by using a different identifier string for each. The
+                identifier is only unique to the name in question, and so it doesn’t
+                matter if another name is using the same service and identifier
+                string.</p>
+                <h2 id="shared-identifiers">Shared identifiers</h2>
+                <p>Since an identifier can be used by multiple names, this can be used
+                to the advantage of Q-App developers as it allows for data to be stored
+                in a deterministic location.</p>
+                <p>An example of this is the user’s avatar. This will always be
+                published with service <code>THUMBNAIL</code> and identifier
+                <code>qortal_avatar</code>, along with the user’s name. So, an app can
+                display the avatar of a user just by specifying their name when
+                requesting the data. The same applies when publishing data.</p>
+                <h2 id="default-resources">“Default” resources</h2>
+                <p>A “default” resource refers to one without an identifier. For
+                example, when a website is published via the UI, it will use the user’s
+                name and the service <code>WEBSITE</code>. These do not have an
+                identifier, and are therefore the “default” website for this name. When
+                requesting or publishing data without an identifier, apps can either
+                omit the <code>identifier</code> key entirely, or include
+                <code>"identifier": "default"</code> to indicate that the resource(s)
+                being queried or published do not have an identifier.</p>
+                <p><a name="services"></a> ## Available service types</p>
+                <p>Here is a list of currently available services that can be used in
+                Q-Apps:</p>
+                <h3 id="public-services">Public services</h3>
+                <p>The services below are intended to be used for publicly accessible
+                data.</p>
+                <p>IMAGE, THUMBNAIL, VIDEO, AUDIO, PODCAST, VOICE, ARBITRARY_DATA, JSON,
+                DOCUMENT, LIST, PLAYLIST, METADATA, BLOG, BLOG_POST, BLOG_COMMENT,
+                GIF_REPOSITORY, ATTACHMENT, FILE, FILES, CHAIN_DATA, STORE, PRODUCT,
+                OFFER, COUPON, CODE, PLUGIN, EXTENSION, GAME, ITEM, NFT, DATABASE,
+                SNAPSHOT, COMMENT, CHAIN_COMMENT, WEBSITE, APP, QCHAT_ATTACHMENT,
+                QCHAT_IMAGE, QCHAT_AUDIO, QCHAT_VOICE</p>
+                <h3 id="private-services">Private services</h3>
+                <p>For the services below, data is encrypted for a single recipient, and
+                can only be decrypted using the private key of the recipient’s
+                wallet.</p>
+                <p>QCHAT_ATTACHMENT_PRIVATE, ATTACHMENT_PRIVATE, FILE_PRIVATE,
+                IMAGE_PRIVATE, VIDEO_PRIVATE, AUDIO_PRIVATE, VOICE_PRIVATE,
+                DOCUMENT_PRIVATE, MAIL_PRIVATE, MESSAGE_PRIVATE</p>
+                <h2 id="single-vs-multi-file-resources">Single vs multi-file
+                resources</h2>
+                <p>Some resources, such as those published with the <code>IMAGE</code>
+                or <code>JSON</code> service, consist of a single file or piece of data
+                (the image or the JSON string). This is the most common type of QDN
+                resource, especially in the context of Q-Apps. These can be published by
+                supplying a base64-encoded string containing the data.</p>
+                <p>Other resources, such as those published with the
+                <code>WEBSITE</code>, <code>APP</code>, or <code>GIF_REPOSITORY</code>
+                service, can contain multiple files and directories. Publishing these
+                kinds of files is not yet available for Q-Apps, however it is possible
+                to retrieve multi-file resources that are already published. When
+                retrieving this data (via FETCH_QDN_RESOURCE), a <code>filepath</code>
+                must be included to indicate the file that you would like to retrieve.
+                There is no need to specify a filepath for single file resources, as
+                these will automatically return the contents of the single file.</p>
+                <h2 id="app-specific-data">App-specific data</h2>
+                <p>Some apps may want to make all QDN data for a particular service
+                available. However, others may prefer to only deal with data that has
+                been published by their app (if a specific format/schema is being used
+                for instance).</p>
+                <p>Identifiers can be used to allow app developers to locate data that
+                has been published by their app. The recommended approach for this is to
+                use the app name as a prefix on all identifiers when publishing
+                data.</p>
+                <p>For instance, an app called <code>MyApp</code> could allow users to
+                publish JSON data. The app could choose to prefix all identifiers with
+                the string <code>myapp_</code>, and then use a random string for each
+                published resource (resulting in identifiers such as
+                <code>myapp_qR5ndZ8v</code>). Then, to locate data that has potentially
+                been published by users of MyApp, it can later search the QDN database
+                for items with <code>"service": "JSON"</code> and
+                <code>"identifier": "myapp_"</code>. The SEARCH_QDN_RESOURCES action has
+                a <code>prefix</code> option in order to match identifiers beginning
+                with the supplied string.</p>
+                <p>Note that QDN is a permissionless system, and therefore it’s not
+                possible to verify that a resource was actually published by the app. It
+                is recommended that apps validate the contents of the resource to ensure
+                it is formatted correctly, instead of making assumptions.</p>
+                <h2 id="updating-a-resource">Updating a resource</h2>
+                <p>To update a resource, it can be overwritten by publishing with the
+                same <code>name</code>, <code>service</code>, and
+                <code>identifier</code> combination. Note that the authenticated account
+                must currently own the name in order to publish an update.</p>
+                <h2 id="routing">Routing</h2>
+                <p>If a non-existent <code>filepath</code> is accessed, the default
+                behaviour of QDN is to return a <code>404: File not found</code> error.
+                This includes anything published using the <code>WEBSITE</code>
+                service.</p>
+                <p>However, routing is handled differently for anything published using
+                the <code>APP</code> service.</p>
+                <p>For apps, QDN automatically sends all unhandled requests to the index
+                file (generally index.html). This allows the app to use custom routing,
+                as it is able to listen on any path. If a file exists at a path, the
+                file itself will be served, and so the request won’t be sent to the
+                index file.</p>
+                <p>It’s recommended that all apps return a 404 page if a request isn’t
+                able to be routed.</p>
+                <h1 id="section-1-simple-links-and-image-loading-via-html">Section 1:
+                Simple links and image loading via HTML</h1>
+                <h2 id="section-1a-linking-to-other-qdn-websites-resources">Section 1a:
+                Linking to other QDN websites / resources</h2>
+                <p>The <code>qortal://</code> protocol can be used to access QDN data
+                from within Qortal websites and apps. The basic format is as
+                follows:</p>
+                <pre><code>&lt;a href=&quot;qortal://{service}/{name}/{identifier}/{path}&quot;&gt;link text&lt;/a&gt;</code></pre>
+                <p>However, the system will support the omission of the
+                <code>identifier</code> and/or <code>path</code> components to allow for
+                simpler URL formats.</p>
+                <p>A simple link to another website can be achieved with this HTML
+                code:</p>
+                <pre><code>&lt;a href=&quot;qortal://WEBSITE/QortalDemo&quot;&gt;link text&lt;/a&gt;</code></pre>
+                <p>To link to a specific page of another website:</p>
+                <pre><code>&lt;a href=&quot;qortal://WEBSITE/QortalDemo/minting-leveling/index.html&quot;&gt;link text&lt;/a&gt;</code></pre>
+                <p>To link to a standalone resource, such as an avatar</p>
+                <pre><code>&lt;a href=&quot;qortal://THUMBNAIL/QortalDemo/qortal_avatar&quot;&gt;avatar&lt;/a&gt;</code></pre>
+                <p>For cases where you would prefer to explicitly include an identifier
+                (to remove ambiguity) you can use the keyword <code>default</code> to
+                access a resource that doesn’t have an identifier. For instance:</p>
+                <pre><code>&lt;a href=&quot;qortal://WEBSITE/QortalDemo/default&quot;&gt;link to root of website&lt;/a&gt;
+                &lt;a href=&quot;qortal://WEBSITE/QortalDemo/default/minting-leveling/index.html&quot;&gt;link to subpage of website&lt;/a&gt;</code></pre>
+                <h2 id="section-1b-linking-to-other-qdn-images">Section 1b: Linking to
+                other QDN images</h2>
+                <p>The same applies for images, such as displaying an avatar:</p>
+                <pre><code>&lt;img src=&quot;qortal://THUMBNAIL/QortalDemo/qortal_avatar&quot; /&gt;</code></pre>
+                <p>…or even an image from an entirely different website:</p>
+                <pre><code>&lt;img src=&quot;qortal://WEBSITE/AlphaX/assets/img/logo.png&quot; /&gt;</code></pre>
+                <h1 id="section-2-integrating-a-javascript-app">Section 2: Integrating a
+                Javascript app</h1>
+                <p>Javascript apps allow for much more complex integrations with
+                Qortal’s blockchain data.</p>
+                <h2 id="section-2a-direct-api-calls">Section 2a: Direct API calls</h2>
+                <p>The standard <a
+                href="http://localhost:12391/api-documentation">Qortal Core API</a> is
+                available to websites and apps, and can be called directly using a
+                standard AJAX request, such as:</p>
+                <pre><code>async function getNameInfo(name) {
+                    const response = await fetch(&quot;/names/&quot; + name);
+                    const nameData = await response.json();
+                    console.log(&quot;nameData: &quot; + JSON.stringify(nameData));
+                }
+                getNameInfo(&quot;QortalDemo&quot;);</code></pre>
+                <p>However, this only works for read-only data, such as looking up
+                transactions, names, balances, etc. Also, since the address of the
+                logged in account can’t be retrieved from the core, apps can’t show
+                personalized data with this approach.</p>
+                <h2 id="section-2b-user-interaction-via-qortalrequest">Section 2b: User
+                interaction via qortalRequest()</h2>
+                <p>To take things a step further, the qortalRequest() function can be
+                used to interact with the user, in order to:</p>
+                <ul>
+                <li>Request address and public key of the logged in account</li>
+                <li>Publish data to QDN</li>
+                <li>Send chat messages</li>
+                <li>Join groups</li>
+                <li>Deploy ATs (smart contracts)</li>
+                <li>Send QORT or any supported foreign coin</li>
+                <li>Add/remove items from lists</li>
+                </ul>
+                <p>In addition to the above, qortalRequest() also supports many
+                read-only functions that are also available via direct core API calls.
+                Using qortalRequest() helps with futureproofing, as the core APIs can be
+                modified without breaking functionality of existing Q-Apps.</p>
+                <h3 id="making-a-request">Making a request</h3>
+                <p>Qortal core will automatically inject the
+                <code>qortalRequest()</code> javascript function to all websites/apps,
+                which returns a Promise. This can be used to fetch data or publish data
+                to the Qortal blockchain. This functionality supports async/await, as
+                well as try/catch error handling.</p>
+                <pre><code>async function myfunction() {
+                    try {
+                        let res = await qortalRequest({
+                            action: &quot;GET_ACCOUNT_DATA&quot;,
+                            address: &quot;QZLJV7wbaFyxaoZQsjm6rb9MWMiDzWsqM2&quot;
+                        });
+                        console.log(JSON.stringify(res)); // Log the response to the console
+                    
+                    } catch(e) {
+                        console.log(&quot;Error: &quot; + JSON.stringify(e));
+                    }
+                }
+                myfunction();</code></pre>
+                <h3 id="timeouts">Timeouts</h3>
+                <p>Request timeouts are handled automatically when using
+                qortalRequest(). The timeout value will differ based on the action being
+                used - see <code>getDefaultTimeout()</code> in <a
+                href="src/main/resources/q-apps/q-apps.js">q-apps.js</a> for the current
+                values.</p>
+                <p>If a request times out it will throw an error -
+                <code>The request timed out</code> - which can be handled by the
+                Q-App.</p>
+                <p>It is also possible to specify a custom timeout using
+                <code>qortalRequestWithTimeout(request, timeout)</code>, however this is
+                discouraged. It’s more reliable and futureproof to let the core handle
+                the timeout values.</p>
+                <h1 id="section-3-qortalrequest-documentation">Section 3: qortalRequest
+                Documentation</h1>
+                <h2 id="supported-actions">Supported actions</h2>
+                <p>Here is a list of currently supported actions: - GET_USER_ACCOUNT -
+                GET_ACCOUNT_DATA - GET_ACCOUNT_NAMES - SEARCH_NAMES - GET_NAME_DATA -
+                LIST_QDN_RESOURCES - SEARCH_QDN_RESOURCES - GET_QDN_RESOURCE_STATUS -
+                GET_QDN_RESOURCE_PROPERTIES - GET_QDN_RESOURCE_METADATA -
+                GET_QDN_RESOURCE_URL - LINK_TO_QDN_RESOURCE - FETCH_QDN_RESOURCE -
+                PUBLISH_QDN_RESOURCE - PUBLISH_MULTIPLE_QDN_RESOURCES - DECRYPT_DATA -
+                SAVE_FILE - GET_WALLET_BALANCE - GET_BALANCE - SEND_COIN -
+                SEARCH_CHAT_MESSAGES - SEND_CHAT_MESSAGE - LIST_GROUPS - JOIN_GROUP -
+                DEPLOY_AT - GET_AT - GET_AT_DATA - LIST_ATS - FETCH_BLOCK -
+                FETCH_BLOCK_RANGE - SEARCH_TRANSACTIONS - GET_PRICE - GET_LIST_ITEMS -
+                ADD_LIST_ITEMS - DELETE_LIST_ITEM</p>
+                <p>More functionality will be added in the future.</p>
+                <h2 id="example-requests">Example Requests</h2>
+                <p>Here are some example requests for each of the above:</p>
+                <h3 id="get-address-of-logged-in-account">Get address of logged in
+                account</h3>
+                <p><em>Will likely require user approval</em></p>
+                <pre><code>let account = await qortalRequest({
+                     action: &quot;GET_USER_ACCOUNT&quot;
+                });
+                let address = account.address;</code></pre>
+                <h3 id="get-public-key-of-logged-in-account">Get public key of logged in
+                account</h3>
+                <p><em>Will likely require user approval</em></p>
+                <pre><code>let pubkey = await qortalRequest({
+                     action: &quot;GET_USER_ACCOUNT&quot;
+                });
+                let publicKey = account.publicKey;</code></pre>
+                <h3 id="get-account-data">Get account data</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_ACCOUNT_DATA&quot;,
+                    address: &quot;QZLJV7wbaFyxaoZQsjm6rb9MWMiDzWsqM2&quot;
+                });</code></pre>
+                <h3 id="get-names-owned-by-account">Get names owned by account</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_ACCOUNT_NAMES&quot;,
+                    address: &quot;QZLJV7wbaFyxaoZQsjm6rb9MWMiDzWsqM2&quot;
+                });</code></pre>
+                <h3 id="search-names">Search names</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;SEARCH_NAMES&quot;,
+                    query: &quot;search query goes here&quot;,
+                    prefix: false, // Optional - if true, only the beginning of the name is matched
+                    limit: 100,
+                    offset: 0,
+                    reverse: false
+                });</code></pre>
+                <h3 id="get-name-data">Get name data</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_NAME_DATA&quot;,
+                    name: &quot;QortalDemo&quot;
+                });</code></pre>
+                <h3 id="list-qdn-resources">List QDN resources</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;LIST_QDN_RESOURCES&quot;,
+                    service: &quot;THUMBNAIL&quot;,
+                    name: &quot;QortalDemo&quot;, // Optional (exact match)
+                    identifier: &quot;qortal_avatar&quot;, // Optional (exact match)
+                    default: true, // Optional
+                    includeStatus: false, // Optional - will take time to respond, so only request if necessary
+                    includeMetadata: false, // Optional - will take time to respond, so only request if necessary
+                    followedOnly: false, // Optional - include followed names only
+                    excludeBlocked: false, // Optional - exclude blocked content
+                    limit: 100,
+                    offset: 0,
+                    reverse: true
+                });</code></pre>
+                <h3 id="search-qdn-resources">Search QDN resources</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;SEARCH_QDN_RESOURCES&quot;,
+                    service: &quot;THUMBNAIL&quot;,
+                    query: &quot;search query goes here&quot;, // Optional - searches both &quot;identifier&quot; and &quot;name&quot; fields
+                    identifier: &quot;search query goes here&quot;, // Optional - searches only the &quot;identifier&quot; field
+                    name: &quot;search query goes here&quot;, // Optional - searches only the &quot;name&quot; field
+                    prefix: false, // Optional - if true, only the beginning of fields are matched in all of the above filters
+                    exactMatchNames: true, // Optional - if true, partial name matches are excluded
+                    default: false, // Optional - if true, only resources without identifiers are returned
+                    includeStatus: false, // Optional - will take time to respond, so only request if necessary
+                    includeMetadata: false, // Optional - will take time to respond, so only request if necessary
+                    nameListFilter: &quot;QApp1234Subscriptions&quot;, // Optional - will only return results if they are from a name included in supplied list
+                    followedOnly: false, // Optional - include followed names only
+                    excludeBlocked: false, // Optional - exclude blocked content
+                    limit: 100,
+                    offset: 0,
+                    reverse: true
+                });</code></pre>
+                <h3 id="search-qdn-resources-multiple-names">Search QDN resources
+                (multiple names)</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;SEARCH_QDN_RESOURCES&quot;,
+                    service: &quot;THUMBNAIL&quot;,
+                    query: &quot;search query goes here&quot;, // Optional - searches both &quot;identifier&quot; and &quot;name&quot; fields
+                    identifier: &quot;search query goes here&quot;, // Optional - searches only the &quot;identifier&quot; field
+                    names: [&quot;QortalDemo&quot;, &quot;crowetic&quot;, &quot;AlphaX&quot;], // Optional - searches only the &quot;name&quot; field for any of the supplied names
+                    prefix: false, // Optional - if true, only the beginning of fields are matched in all of the above filters
+                    default: false, // Optional - if true, only resources without identifiers are returned
+                    includeStatus: false, // Optional - will take time to respond, so only request if necessary
+                    includeMetadata: false, // Optional - will take time to respond, so only request if necessary
+                    nameListFilter: &quot;QApp1234Subscriptions&quot;, // Optional - will only return results if they are from a name included in supplied list
+                    followedOnly: false, // Optional - include followed names only
+                    excludeBlocked: false, // Optional - exclude blocked content
+                    limit: 100,
+                    offset: 0,
+                    reverse: true
+                });</code></pre>
+                <h3 id="fetch-qdn-single-file-resource">Fetch QDN single file
+                resource</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;FETCH_QDN_RESOURCE&quot;,
+                    name: &quot;QortalDemo&quot;,
+                    service: &quot;THUMBNAIL&quot;,
+                    identifier: &quot;qortal_avatar&quot;, // Optional. If omitted, the default resource is returned, or you can alternatively use the keyword &quot;default&quot;
+                    encoding: &quot;base64&quot;, // Optional. If omitted, data is returned in raw form
+                    rebuild: false
+                });</code></pre>
+                <h3 id="fetch-file-from-multi-file-qdn-resource">Fetch file from multi
+                file QDN resource</h3>
+                <p>Data is returned in the base64 format</p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;FETCH_QDN_RESOURCE&quot;,
+                    name: &quot;QortalDemo&quot;,
+                    service: &quot;WEBSITE&quot;,
+                    identifier: &quot;default&quot;, // Optional. If omitted, the default resource is returned, or you can alternatively request that using the keyword &quot;default&quot;, as shown here
+                    filepath: &quot;index.html&quot;, // Required only for resources containing more than one file
+                    rebuild: false
+                });</code></pre>
+                <h3 id="get-qdn-resource-status">Get QDN resource status</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_QDN_RESOURCE_STATUS&quot;,
+                    name: &quot;QortalDemo&quot;,
+                    service: &quot;THUMBNAIL&quot;,
+                    identifier: &quot;qortal_avatar&quot;, // Optional
+                    build: true // Optional - request that the resource is fetched &amp; built in the background
+                });</code></pre>
+                <h3 id="get-qdn-resource-properties">Get QDN resource properties</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_QDN_RESOURCE_PROPERTIES&quot;,
+                    name: &quot;QortalDemo&quot;,
+                    service: &quot;THUMBNAIL&quot;,
+                    identifier: &quot;qortal_avatar&quot; // Optional
+                });
+                // Returns: filename, size, mimeType (where available)</code></pre>
+                <h3 id="get-qdn-resource-metadata">Get QDN resource metadata</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_QDN_RESOURCE_METADATA&quot;,
+                    name: &quot;QortalDemo&quot;,
+                    service: &quot;THUMBNAIL&quot;,
+                    identifier: &quot;qortal_avatar&quot; // Optional
+                });</code></pre>
+                <h3 id="publish-a-single-file-to-qdn">Publish a single file to QDN</h3>
+                <p><em>Requires user approval</em>.<br /> Note: this publishes a single,
+                base64-encoded file. Multi-file resource publishing (such as a WEBSITE
+                or GIF_REPOSITORY) is not yet supported via a Q-App. It will be added in
+                a future update.</p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;PUBLISH_QDN_RESOURCE&quot;,
+                    name: &quot;Demo&quot;, // Publisher must own the registered name - use GET_ACCOUNT_NAMES for a list
+                    service: &quot;IMAGE&quot;,
+                    identifier: &quot;myapp-image1234&quot; // Optional
+                    data64: &quot;base64_encoded_data&quot;,
+                    // filename: &quot;image.jpg&quot;, // Optional - to help apps determine the file&#39;s type
+                    // title: &quot;Title&quot;, // Optional
+                    // description: &quot;Description&quot;, // Optional
+                    // category: &quot;TECHNOLOGY&quot;, // Optional
+                    // tag1: &quot;any&quot;, // Optional
+                    // tag2: &quot;strings&quot;, // Optional
+                    // tag3: &quot;can&quot;, // Optional
+                    // tag4: &quot;go&quot;, // Optional
+                    // tag5: &quot;here&quot;, // Optional
+                    // encrypt: true, // Optional - to be used with a private service
+                    // recipientPublicKey: &quot;publickeygoeshere&quot; // Only required if `encrypt` is set to true
+                });</code></pre>
+                <h3 id="publish-multiple-resources-at-once-to-qdn">Publish multiple
+                resources at once to QDN</h3>
+                <p><em>Requires user approval</em>.<br /> Note: each resource being
+                published consists of a single, base64-encoded file, each in its own
+                transaction. Useful for publishing two or more related things, such as a
+                video and a video thumbnail.</p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;PUBLISH_MULTIPLE_QDN_RESOURCES&quot;,
+                    resources: [
+                        name: &quot;Demo&quot;, // Publisher must own the registered name - use GET_ACCOUNT_NAMES for a list
+                        service: &quot;IMAGE&quot;,
+                        identifier: &quot;myapp-image1234&quot; // Optional
+                        data64: &quot;base64_encoded_data&quot;,
+                        // filename: &quot;image.jpg&quot;, // Optional - to help apps determine the file&#39;s type
+                        // title: &quot;Title&quot;, // Optional
+                        // description: &quot;Description&quot;, // Optional
+                        // category: &quot;TECHNOLOGY&quot;, // Optional
+                        // tag1: &quot;any&quot;, // Optional
+                        // tag2: &quot;strings&quot;, // Optional
+                        // tag3: &quot;can&quot;, // Optional
+                        // tag4: &quot;go&quot;, // Optional
+                        // tag5: &quot;here&quot;, // Optional
+                        // encrypt: true, // Optional - to be used with a private service
+                        // recipientPublicKey: &quot;publickeygoeshere&quot; // Only required if `encrypt` is set to true
+                    ],
+                    [
+                        ... more resources here if needed ...
+                    ]
+                });</code></pre>
+                <h3 id="decrypt-encryptedprivate-data">Decrypt encrypted/private
+                data</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;DECRYPT_DATA&quot;,
+                    encryptedData: &#39;qortalEncryptedDatabMx4fELNTV+ifJxmv4+GcuOIJOTo+3qAvbWKNY2L1r&#39;,
+                    publicKey: &#39;publickeygoeshere&#39;
+                });
+                // Returns base64 encoded string of plaintext data</code></pre>
+                <h3 id="prompt-user-to-save-a-file-to-disk">Prompt user to save a file
+                to disk</h3>
+                <p>Note: mimeType not required but recommended. If not specified, saving
+                will fail if the mimeType is unable to be derived from the Blob.</p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;SAVE_FILE&quot;,
+                    blob: dataBlob,
+                    filename: &quot;myfile.pdf&quot;,
+                    mimeType: &quot;application/pdf&quot; // Optional but recommended
+                });</code></pre>
+                <h3 id="get-wallet-balance-qort">Get wallet balance (QORT)</h3>
+                <p><em>Requires user approval</em></p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_WALLET_BALANCE&quot;,
+                    coin: &quot;QORT&quot;
+                });</code></pre>
+                <h3 id="get-address-or-asset-balance">Get address or asset balance</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_BALANCE&quot;,
+                    address: &quot;QZLJV7wbaFyxaoZQsjm6rb9MWMiDzWsqM2&quot;
+                });</code></pre>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_BALANCE&quot;,
+                    assetId: 1,
+                    address: &quot;QZLJV7wbaFyxaoZQsjm6rb9MWMiDzWsqM2&quot;
+                });</code></pre>
+                <h3 id="send-qort-to-address">Send QORT to address</h3>
+                <p><em>Requires user approval</em></p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;SEND_COIN&quot;,
+                    coin: &quot;QORT&quot;,
+                    destinationAddress: &quot;QZLJV7wbaFyxaoZQsjm6rb9MWMiDzWsqM2&quot;,
+                    amount: 1.00000000 // 1 QORT
+                });</code></pre>
+                <h3 id="send-foreign-coin-to-address">Send foreign coin to address</h3>
+                <p><em>Requires user approval</em></p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;SEND_COIN&quot;,
+                    coin: &quot;LTC&quot;,
+                    destinationAddress: &quot;LSdTvMHRm8sScqwCi6x9wzYQae8JeZhx6y&quot;,
+                    amount: 1.00000000, // 1 LTC
+                    fee: 0.00000020 // fee per byte
+                });</code></pre>
+                <h3 id="search-or-list-chat-messages">Search or list chat messages</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;SEARCH_CHAT_MESSAGES&quot;,
+                    before: 999999999999999,
+                    after: 0,
+                    txGroupId: 0, // Optional (must specify either txGroupId or two involving addresses)
+                    // involving: [&quot;QZLJV7wbaFyxaoZQsjm6rb9MWMiDzWsqM2&quot;, &quot;QSefrppsDCsZebcwrqiM1gNbWq7YMDXtG2&quot;], // Optional (must specify either txGroupId or two involving addresses)
+                    // reference: &quot;reference&quot;, // Optional
+                    // chatReference: &quot;chatreference&quot;, // Optional
+                    // hasChatReference: true, // Optional
+                    encoding: &quot;BASE64&quot;, // Optional (defaults to BASE58 if omitted)
+                    limit: 100,
+                    offset: 0,
+                    reverse: true
+                });</code></pre>
+                <h3 id="send-a-group-chat-message">Send a group chat message</h3>
+                <p><em>Requires user approval</em></p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;SEND_CHAT_MESSAGE&quot;,
+                    groupId: 0,
+                    message: &quot;Test&quot;
+                });</code></pre>
+                <h3 id="send-a-private-chat-message">Send a private chat message</h3>
+                <p><em>Requires user approval</em></p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;SEND_CHAT_MESSAGE&quot;,
+                    destinationAddress: &quot;QZLJV7wbaFyxaoZQsjm6rb9MWMiDzWsqM2&quot;,
+                    message: &quot;Test&quot;
+                });</code></pre>
+                <h3 id="list-groups">List groups</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;LIST_GROUPS&quot;,
+                    limit: 100,
+                    offset: 0,
+                    reverse: true
+                });</code></pre>
+                <h3 id="join-a-group">Join a group</h3>
+                <p><em>Requires user approval</em></p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;JOIN_GROUP&quot;,
+                    groupId: 100
+                });</code></pre>
+                <h3 id="deploy-an-at">Deploy an AT</h3>
+                <p><em>Requires user approval</em></p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;DEPLOY_AT&quot;,
+                    creationBytes: &quot;12345&quot;, // Must be Base58 encoded
+                    name: &quot;test name&quot;,
+                    description: &quot;test description&quot;,
+                    type: &quot;test type&quot;,
+                    tags: &quot;test tags&quot;,
+                    amount: 1.00000000, // 1 QORT
+                    assetId: 0,
+                    // fee: 0.002 // optional - will use default fee if excluded
+                });</code></pre>
+                <h3 id="get-at-info">Get AT info</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_AT&quot;,
+                    atAddress: &quot;ASRUsCjk6fa5bujv3oWYmWaVqNtvxydpPH&quot;
+                });</code></pre>
+                <h3 id="get-at-data-bytes-base58-encoded">Get AT data bytes (base58
+                encoded)</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_AT_DATA&quot;,
+                    atAddress: &quot;ASRUsCjk6fa5bujv3oWYmWaVqNtvxydpPH&quot;
+                });</code></pre>
+                <h3 id="list-ats-by-functionality">List ATs by functionality</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;LIST_ATS&quot;,
+                    codeHash58: &quot;4KdJETRAdymE7dodDmJbf5d9L1bp4g5Nxky8m47TBkvA&quot;,
+                    isExecutable: true,
+                    limit: 100,
+                    offset: 0,
+                    reverse: true
+                });</code></pre>
+                <h3 id="fetch-block-by-signature">Fetch block by signature</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;FETCH_BLOCK&quot;,
+                    signature: &quot;875yGFUy1zHV2hmxNWzrhtn9S1zkeD7SQppwdXFysvTXrankCHCz4iyAUgCBM3GjvibbnyRQpriuy1cyu953U1u5uQdzuH3QjQivi9UVwz86z1Akn17MGd5Z5STjpDT7248K6vzMamuqDei57Znonr8GGgn8yyyABn35CbZUCeAuXju&quot;
+                });</code></pre>
+                <h3 id="fetch-block-by-height">Fetch block by height</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;FETCH_BLOCK&quot;,
+                    height: &quot;1139850&quot;
+                });</code></pre>
+                <h3 id="fetch-a-range-of-blocks">Fetch a range of blocks</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;FETCH_BLOCK_RANGE&quot;,
+                    height: &quot;1139800&quot;,
+                    count: 20,
+                    reverse: false
+                });</code></pre>
+                <h3 id="search-transactions">Search transactions</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;SEARCH_TRANSACTIONS&quot;,
+                    // startBlock: 1139000,
+                    // blockLimit: 1000,
+                    txGroupId: 0,
+                    txType: [
+                        &quot;PAYMENT&quot;,
+                        &quot;REWARD_SHARE&quot;
+                    ],
+                    confirmationStatus: &quot;CONFIRMED&quot;,
+                    limit: 10,
+                    offset: 0,
+                    reverse: false
+                });</code></pre>
+                <h3 id="get-an-estimate-of-the-qort-price">Get an estimate of the QORT
+                price</h3>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_PRICE&quot;,
+                    blockchain: &quot;LITECOIN&quot;,
+                    // maxtrades: 10,
+                    inverse: true
+                });</code></pre>
+                <h3 id="get-url-to-load-a-qdn-resource">Get URL to load a QDN
+                resource</h3>
+                <p>Note: this returns a “Resource does not exist” error if a
+                non-existent resource is requested.</p>
+                <pre><code>let url = await qortalRequest({
+                    action: &quot;GET_QDN_RESOURCE_URL&quot;,
+                    service: &quot;THUMBNAIL&quot;,
+                    name: &quot;QortalDemo&quot;,
+                    identifier: &quot;qortal_avatar&quot;
+                    // path: &quot;filename.jpg&quot; // optional - not needed if resource contains only one file
+                });</code></pre>
+                <h3 id="get-url-to-load-a-qdn-website">Get URL to load a QDN
+                website</h3>
+                <p>Note: this returns a “Resource does not exist” error if a
+                non-existent resource is requested.</p>
+                <pre><code>let url = await qortalRequest({
+                    action: &quot;GET_QDN_RESOURCE_URL&quot;,
+                    service: &quot;WEBSITE&quot;,
+                    name: &quot;QortalDemo&quot;,
+                });</code></pre>
+                <h3 id="get-url-to-load-a-specific-file-from-a-qdn-website">Get URL to
+                load a specific file from a QDN website</h3>
+                <p>Note: this returns a “Resource does not exist” error if a
+                non-existent resource is requested.</p>
+                <pre><code>let url = await qortalRequest({
+                    action: &quot;GET_QDN_RESOURCE_URL&quot;,
+                    service: &quot;WEBSITE&quot;,
+                    name: &quot;AlphaX&quot;,
+                    path: &quot;/assets/img/logo.png&quot;
+                });</code></pre>
+                <h3 id="linkredirect-to-another-qdn-website">Link/redirect to another
+                QDN website</h3>
+                <p>Note: an alternate method is to include
+                <code>&lt;a href="qortal://WEBSITE/QortalDemo"&gt;link text&lt;/a&gt;</code>
+                within your HTML code.</p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;LINK_TO_QDN_RESOURCE&quot;,
+                    service: &quot;WEBSITE&quot;,
+                    name: &quot;QortalDemo&quot;,
+                });</code></pre>
+                <h3
+                id="linkredirect-to-a-specific-path-of-another-qdn-website">Link/redirect
+                to a specific path of another QDN website</h3>
+                <p>Note: an alternate method is to include
+                <code>&lt;a href="qortal://WEBSITE/QortalDemo/minting-leveling/index.html"&gt;link text&lt;/a&gt;</code>
+                within your HTML code.</p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;LINK_TO_QDN_RESOURCE&quot;,
+                    service: &quot;WEBSITE&quot;,
+                    name: &quot;QortalDemo&quot;,
+                    path: &quot;/minting-leveling/index.html&quot;
+                });</code></pre>
+                <h3 id="get-the-contents-of-a-list">Get the contents of a list</h3>
+                <p><em>Requires user approval</em></p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;GET_LIST_ITEMS&quot;,
+                    list_name: &quot;followedNames&quot;
+                });</code></pre>
+                <h3 id="add-one-or-more-items-to-a-list">Add one or more items to a
+                list</h3>
+                <p><em>Requires user approval</em></p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;ADD_LIST_ITEMS&quot;,
+                    list_name: &quot;blockedNames&quot;,
+                    items: [&quot;QortalDemo&quot;]
+                });</code></pre>
+                <h3 id="delete-a-single-item-from-a-list">Delete a single item from a
+                list</h3>
+                <p><em>Requires user approval</em>. Items must be deleted one at a
+                time.</p>
+                <pre><code>let res = await qortalRequest({
+                    action: &quot;DELETE_LIST_ITEM&quot;,
+                    list_name: &quot;blockedNames&quot;,
+                    item: &quot;QortalDemo&quot;
+                });</code></pre>
+                <h1 id="section-4-examples">Section 4: Examples</h1>
+                <p>Some example projects can be found <a
+                href="https://github.com/Qortal/Q-Apps">here</a>. These can be cloned
+                and modified, or used as a reference when creating a new app.</p>
+                <h2 id="sample-app">Sample App</h2>
+                <p>Here is a sample application to display the logged-in user’s
+                avatar:</p>
+                <pre><code>&lt;html&gt;
+                &lt;head&gt;
+                    &lt;script&gt;
+                        async function showAvatar() {
+                            try {
+                                // Get QORT address of logged in account
+                                let account = await qortalRequest({
+                                    action: &quot;GET_USER_ACCOUNT&quot;
+                                });
+                                let address = account.address;
+                                console.log(&quot;address: &quot; + address);
+                            
+                                // Get names owned by this account
+                                let names = await qortalRequest({
+                                    action: &quot;GET_ACCOUNT_NAMES&quot;,
+                                    address: address
+                                });
+                                console.log(&quot;names: &quot; + JSON.stringify(names));
+                            
+                                if (names.length == 0) {
+                                    console.log(&quot;User has no registered names&quot;);
+                                    return;
+                                }
+                            
+                                // Download base64-encoded avatar of the first registered name
+                                let avatar = await qortalRequest({
+                                    action: &quot;FETCH_QDN_RESOURCE&quot;,
+                                    name: names[0].name,
+                                    service: &quot;THUMBNAIL&quot;,
+                                    identifier: &quot;qortal_avatar&quot;,
+                                    encoding: &quot;base64&quot;
+                                });
+                                console.log(&quot;Avatar size: &quot; + avatar.length + &quot; bytes&quot;);
+                            
+                                // Display the avatar image on the screen
+                                document.getElementById(&quot;avatar&quot;).src = &quot;data:image/png;base64,&quot; + avatar;
+                                
+                            } catch(e) {
+                                console.log(&quot;Error: &quot; + JSON.stringify(e));
+                            }
+                        }
+                    &lt;/script&gt;
+                &lt;/head&gt;
+                &lt;body onload=&quot;showAvatar()&quot;&gt;
+                    &lt;img width=&quot;500&quot; id=&quot;avatar&quot; /&gt;
+                &lt;/body&gt;
+                &lt;/html&gt;</code></pre>
+                <h1 id="section-5-testing-and-development">Section 5: Testing and
+                Development</h1>
+                <p>Publishing an in-development app to mainnet isn’t recommended. There
+                are several options for developing and testing a Q-app before publishing
+                to mainnet:</p>
+                <h3 id="preview-mode">Preview mode</h3>
+                <p>Select “Preview” in the UI after choosing the zip. This allows for
+                full Q-App testing without the need to publish any data.</p>
+                <h3 id="testnets">Testnets</h3>
+                <p>For an end-to-end test of Q-App publishing, you can use the official
+                testnet, or set up a single node testnet of your own (often referred to
+                as devnet) on your local machine. See <a
+                href="testnet/README.md#quick-start">Single Node Testnet Quick Start
+                Guide</a>.</p>
+                <h3 id="debugging">Debugging</h3>
+                <p>It is recommended that you develop and test in a web browser, to
+                allow access to the javascript console. To do this: 1. Open the UI app,
+                then minimise it. 2. In a Chromium-based web browser, visit:
+                http://localhost:12388/ 3. Log in to your account and then preview your
+                app/website. 4. Go to
+                <code>View &gt; Developer &gt; JavaScript Console</code>. Here you can
+                monitor console logs, errors, and network requests from your app, in the
+                same way as any other web-app.</p>
+                
+        </p>
+    </div>
+
 </body>
 
 <script src="main.js"></script>
